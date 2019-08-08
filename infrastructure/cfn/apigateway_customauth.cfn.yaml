@@ -26,9 +26,6 @@ Parameters:
   AwsAccount:
     Type: String
 
-  TargetApiGatewayStackName:
-    Type: String
-
 Resources:
 
   LambdaExecutionRole:

@@ -61,7 +61,6 @@ deploy: checkenv zipcode putcode
             BasicAuthPassword=${BASIC_AUTH_PASSWORD} \
             TargetRestApiId=${RESTAPI_ID} \
             FunctionBucket=${FUNCTION_BUCKET} \
-            TargetApiGatewayStackName=${TARGET_APIGW_STACK} \
         --capabilities CAPABILITY_IAM
 
 ## Define checks to run on PR
