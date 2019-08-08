@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion : '2010-09-09'
+Description: BasicAuth Lambda custom authorizer and APIGatway components
+
+
+Parameters:
+
+  BasicAuthUsername:
+    Type: String
+
+  BasicAuthPassword:
+    Type: String
+
+  TargetRestApiId:
+    Type: String
+
+  ProjectId:
+    Type: String
+
+  FunctionBucket:
+    Type: String
+
+  AwsRegion:
+    Type: String
+    Default: 'ap-northeast-1'
+
+  AwsAccount:
+    Type: String
+
+  TargetApiGatewayStackName:
+    Type: String
+
+Resources:
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Effect: "Allow"
+          Principal:
+            Service: ["lambda.amazonaws.com"]
+          Action: ["sts:AssumeRole"]
+      ManagedPolicyArns: ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
+
+  # create authorizer lambda function
+  BasicAuthLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: 'authorizers.basicauth.check_basicauth_header_authorization_handler'
+      Description: !Sub '(${ProjectId}) Custom Authorizer Function'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref FunctionBucket
+        S3Key: function.zip
+
+      Runtime: "python3.7"
+      MemorySize: 256
+      Timeout: 30
+      Tags:
+        -
+          Key: "ProjectId"
+          Value: !Ref ProjectId
+
+  # X - create lambda permissions for apigateway (allow invoke) principal 'apigateway.amazonaws.com'
+  # -- should already be available from zappa stack install
+  InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BasicAuthLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+
+  # create api gateway authorizer
+  BasicAuthApiGatewayAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerResultTtlInSeconds: 300
+      AuthorizerUri: !Sub 'arn:aws:apigateway:${AwsRegion}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AwsRegion}:${AwsAccount}:function:${BasicAuthLambda}/invocations'
+      IdentitySource: "method.request.header.Authorization"
+      Name: !Sub 'BasicAuthAuthorizer-${ProjectId}'
+      RestApiId: !Ref TargetRestApiId
+      Type: REQUEST
+
+  # create UNAUTHORIZED api gateway response
+  UnauthorizedApiGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      ResponseParameters:
+        "gatewayresponse.header.WWW-Authenticate" : "'Basic'"
+      ResponseTemplates:
+        "application/json" : "{'message':$context.error.messageString}"
+      ResponseType: "UNAUTHORIZED"
+      RestApiId: !Ref TargetRestApiId
+      StatusCode: "401"
+
+  # UPDATE existing "aws_api_gateway_method" proxy apigateway method to include "CUSTOM" authorizer
+  # TODO via awscli (?)
+
+  # create api gateway method for custom authorizer
+
+
+#
+#
+#
+#----
+#
+#  BasicAuthLambda:
+#    Type: AWS::Serverless::Function
+#    Properties:
+#      Handler: 'authorizers.basicauth.check_basicauth_header_authorization_handler'
+#      Runtime: python3.7
+#      MemorySize: 128
+#      CodeUri: !Sub 's3://${FunctionBucket}/function.zip'
+#      Description: basicauth custom authorizer
+#      Policies:
+#        - AWSLambdaExecute
+#        -
+#      Environment:
+#        Variables:
+#          BASIC_AUTH_USERNAME: !Ref BasicAuthUsername
+#          BASIC_AUTH_PASSWORD: !Ref BasicAUthPassword
+#      Tags:
+#        - Key: 'CostCenter'
+#          Value: !Ref CostCenter
+#      Events:
+#        Api:
+#          Type: Api
+#          Properties:
+#            RestApiId: !Ref TargetRestApiId
+#            Path: /
+#            Method: GET
+#
+#  BasicAuthLambdaPermission:
+#    Type: "AWS::Lambda::Permission"
+#    Properties:
+#      Action: lambda:InvokeFunction
+#      FunctionName: !Ref BasicAuthLambda
+#      Principal: apigateway.amazonaws.com
+#
+#
+#  Auth:
+#    # refer to:
+#    # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api-auth-object
+#    Authorizers:
+#      LambdaRequestAuthorizer:
+#          FunctionPayloadType: REQUEST
+#          FunctionArn: !GetAtt BasicAuthLambda.Arn
+#          # FunctionInvokeRole: arn:aws:iam::123456789012:role/S3Access # OPTIONAL
+#          Identity:
+#            Headers:
+#              - Authorization
+#
+#  GatewayResponses:
+#    # Refer to:
+#    # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#gateway-response-object
+#    UNAUTHORIZED:
+#      StatusCode: 401 # Even though this is the default value for UNAUTHORIZED.
+#      ResponseTemplates:
+#        "application/json": '{ "message": $context.error.messageString }'
+#      ResponseParameters:
+#        #Paths:
+#        #  path-key: "'value'"
+#        #QueryStrings:
+#        #  query-string-key: "'value'"
+#        Headers:
+#          Access-Control-Expose-Headers: "'WWW-Authenticate'"
+#          Access-Control-Allow-Origin: "'*'"
+#          WWW-Authenticate: >-
+#            'Bearer realm="admin"'
