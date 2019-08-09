@@ -44,6 +44,9 @@ zipcode:
 putcode:
 	aws s3 cp function.zip s3://${FUNCTION_BUCKET}
 
+installauthorizer:
+    pipenv run python -m authorizers.install --restapi-id ${RESTAPI_ID}
+
 updateapigwmethod:
 	aws apigateway update-method \
         --rest-api-id ${RESTAPI_ID} \
