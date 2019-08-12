@@ -86,6 +86,28 @@ def install_authorizer_to_restapi_methods(restapi_id: str):
                 logger.info(f'CUSTOM authorizer "{authorizer_name}({authorizer_id})" applied to restAPI Method: {formatted_response}')
 
 
+def deploy_api(restapi_id):
+    """Re-deploy the api so that the CUSTOM authorizer takes effect"""
+    response = APIGW.get_stages(
+        restApiId=restapi_id,
+    )
+    if len(response['item']) > 1:
+        raise ValueError(f'Only 1 stage expected more than 1 defined: {response}')
+    stage = response['item'][0]
+
+    # create a deployment for the stage
+    logger.info(f'Deploying API...')
+    response = APIGW.create_deployment(
+        restApiId=restapi_id,
+        stageName=stage['stageName']
+    )
+    status_code = response['ResponseMetadata']['HTTPStatusCode']
+    if status_code == 201:
+        logger.info(f"create_deployment response: SUCCESS({status_code})")
+    else:
+        logger.error(response)
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(__doc__)
@@ -99,3 +121,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     install_authorizer_to_restapi_methods(args.restapi_id)
+    deploy_api(args.restapi_id)
