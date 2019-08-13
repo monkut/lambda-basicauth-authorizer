@@ -11,6 +11,9 @@ from urllib.error import HTTPError
 BASIC_AUTH_USERNAME = os.getenv('BASIC_AUTH_USERNAME', None)
 BASIC_AUTH_PASSWORD = os.getenv('BASIC_AUTH_PASSWORD', None)
 
+if not all((BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD)):
+    raise ValueError(f'Required ENVIRONMENT VARIABLE(s) not set: BASIC_AUTH_USERNAME and/or BASIC_AUTH_PASSWORD')
+
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.INFO,
@@ -209,8 +212,13 @@ def basicauth_decode(encoded_str: bytes) -> Tuple[str, str]:
     nothing could be decoded.
     """
     try:
-        components = encoded_str.decode('utf8').strip().split(' ')
-    except Exception:
+        if isinstance(encoded_str, str):
+            components = encoded_str.strip().split(' ')
+        else:
+            components = encoded_str.decode('utf8').strip().split(' ')
+    except Exception as e:
+        logger.exception(e)
+        logger.error(f'unable to decode header "encoded_str": {encoded_str}')
         raise DecodeError
 
     # If split is only one element, try to decode the username and password
@@ -218,7 +226,9 @@ def basicauth_decode(encoded_str: bytes) -> Tuple[str, str]:
     if len(components) == 1:
         try:
             username, password = b64decode(components).split(':', 1)
-        except Exception:
+        except Exception as e:
+            logger.exception(e)
+            logger.error(f'unable to b64decode "components": {components}')
             raise DecodeError
 
     # If there are only two elements, check the first and ensure it says
@@ -229,10 +239,16 @@ def basicauth_decode(encoded_str: bytes) -> Tuple[str, str]:
         second_component = components[1].strip()
         if first_component.lower() == 'basic':
             try:
-                username, password = b64decode(second_component).split(':', 1)
-            except:
+                encoded_second_component = second_component.encode('utf8')  # b64decode requires a bytes-like object
+                encoded_username, encoded_password = b64decode(encoded_second_component).split(b':', 1)
+                username = encoded_username.decode('utf8')
+                password = encoded_password.decode('utf8')
+            except Exception as e:
+                logger.exception(e)
+                logger.error(f'unable to b64decode "second_component": {second_component}')
                 raise DecodeError
         else:
+            logger.error(f'len(components) == 2, first_component.lower() != "basic": first_component={first_component}')
             raise DecodeError
 
     # If there are more than 2 elements, something crazy must be happening.
@@ -265,8 +281,10 @@ def check_basicauth_header_authorization_handler(event, context):
         principal_id = '*'
 
     if username != BASIC_AUTH_USERNAME:
+        logger.error(f'Invalid Username: {username}')
         raise Exception('Unauthorized')  # Raises 401 response from API Gateway
     elif password != BASIC_AUTH_PASSWORD:
+        logger.error(f'Invalid password: {password}')
         raise Exception('Unauthorized')  # Raises 401 response from API Gateway
 
     # arn:partition:service:region:account-id:resourcetype/resource/qualifier
