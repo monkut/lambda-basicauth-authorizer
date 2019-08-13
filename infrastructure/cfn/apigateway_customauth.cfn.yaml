@@ -54,6 +54,10 @@ Resources:
       Runtime: "python3.7"
       MemorySize: 256
       Timeout: 30
+      Environment:
+        Variables:
+          BASIC_AUTH_USERNAME: !Ref BasicAuthUsername
+          BASIC_AUTH_PASSWORD: !Ref BasicAuthPassword
       Tags:
         -
           Key: "ProjectId"
@@ -91,77 +95,9 @@ Resources:
       RestApiId: !Ref TargetRestApiId
       StatusCode: "401"
 
-  # UPDATE existing "aws_api_gateway_method" proxy apigateway method to include "CUSTOM" authorizer
-  # TODO via awscli (?)
-
-  # create api gateway method for custom authorizer
-
-
-#
-#
-#
-#----
-#
-#  BasicAuthLambda:
-#    Type: AWS::Serverless::Function
-#    Properties:
-#      Handler: 'authorizers.basicauth.check_basicauth_header_authorization_handler'
-#      Runtime: python3.7
-#      MemorySize: 128
-#      CodeUri: !Sub 's3://${FunctionBucket}/function.zip'
-#      Description: basicauth custom authorizer
-#      Policies:
-#        - AWSLambdaExecute
-#        -
-#      Environment:
-#        Variables:
-#          BASIC_AUTH_USERNAME: !Ref BasicAuthUsername
-#          BASIC_AUTH_PASSWORD: !Ref BasicAUthPassword
-#      Tags:
-#        - Key: 'CostCenter'
-#          Value: !Ref CostCenter
-#      Events:
-#        Api:
-#          Type: Api
-#          Properties:
-#            RestApiId: !Ref TargetRestApiId
-#            Path: /
-#            Method: GET
-#
-#  BasicAuthLambdaPermission:
-#    Type: "AWS::Lambda::Permission"
-#    Properties:
-#      Action: lambda:InvokeFunction
-#      FunctionName: !Ref BasicAuthLambda
-#      Principal: apigateway.amazonaws.com
-#
-#
-#  Auth:
-#    # refer to:
-#    # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api-auth-object
-#    Authorizers:
-#      LambdaRequestAuthorizer:
-#          FunctionPayloadType: REQUEST
-#          FunctionArn: !GetAtt BasicAuthLambda.Arn
-#          # FunctionInvokeRole: arn:aws:iam::123456789012:role/S3Access # OPTIONAL
-#          Identity:
-#            Headers:
-#              - Authorization
-#
-#  GatewayResponses:
-#    # Refer to:
-#    # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#gateway-response-object
-#    UNAUTHORIZED:
-#      StatusCode: 401 # Even though this is the default value for UNAUTHORIZED.
-#      ResponseTemplates:
-#        "application/json": '{ "message": $context.error.messageString }'
-#      ResponseParameters:
-#        #Paths:
-#        #  path-key: "'value'"
-#        #QueryStrings:
-#        #  query-string-key: "'value'"
-#        Headers:
-#          Access-Control-Expose-Headers: "'WWW-Authenticate'"
-#          Access-Control-Allow-Origin: "'*'"
-#          WWW-Authenticate: >-
-#            'Bearer realm="admin"'
+Outputs:
+  CustomAuthorizerFuncNameExport:
+    Description: 'BasicAuthLambda Function Name value'
+    Value: !Ref BasicAuthLambda
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomAuthorizerFunc'
