@@ -44,18 +44,14 @@ zipcode:
 putcode:
 	aws s3 cp function.zip s3://${FUNCTION_BUCKET}
 
+updatefunc: zipcode putcode
+	aws lambda update-function-code --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_BUCKET}')].[FunctionName]" --output text) --s3-bucket ${FUNCTION_BUCKET} --s3-key function.zip
+	aws lambda publish-version --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_BUCKET}')].[FunctionName]" --output text)
+
 installauthorizer:
 	pipenv run python -m authorizers.install --restapi-id ${RESTAPI_ID}
 
-updateapigwmethod:
-	aws apigateway update-method \
-        --rest-api-id ${RESTAPI_ID} \
-        --resource-id ${RESOURCE_ID} \
-        --http-method "ANY" \
-        --patch-operations \
-            op="replace",path="/{proxy+}",value="CUSTOM",from="None"
-
-deploy: checkenv zipcode putcode
+deploy: checkenv updatefunc installauthorizer
 	aws cloudformation deploy --template-file ./infrastructure/cfn/apigateway_customauth.cfn.yaml --stack-name ${FUNCTION_BUCKET} \
         --parameter-overrides \
             AwsAccount=${AWS_ACCOUNT} \
