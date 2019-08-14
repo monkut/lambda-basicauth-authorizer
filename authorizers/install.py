@@ -29,7 +29,11 @@ def install_authorizer_to_restapi_methods(restapi_id: str):
         restApiId=restapi_id,
     )
     assert 'items' in response
-    assert len(response['items']) == 1  # should only have one authorizer defined
+
+    if len(response['items']) != 1:  # should only have one authorizer defined
+        logger.error(response['items'])
+        msg = f'Expect only 1 item in APIGW.get_authorizers(estApiId="{restapi_id}")'
+        raise ValueError(msg)
 
     authorizer_info = response['items'][0]
     # {

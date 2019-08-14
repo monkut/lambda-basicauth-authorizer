@@ -28,6 +28,7 @@
 
     ```bash
     make deploy
+    make install
     ```
 
 ### Update authorizer code

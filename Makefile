@@ -51,7 +51,7 @@ updatefunc: zipcode putcode
 installauthorizer:
 	pipenv run python -m authorizers.install --restapi-id ${RESTAPI_ID}
 
-deploy: checkenv updatefunc installauthorizer
+deploy: checkenv
 	aws cloudformation deploy --template-file ./infrastructure/cfn/apigateway_customauth.cfn.yaml --stack-name ${FUNCTION_BUCKET} \
         --parameter-overrides \
             AwsAccount=${AWS_ACCOUNT} \
@@ -61,6 +61,8 @@ deploy: checkenv updatefunc installauthorizer
             TargetRestApiId=${RESTAPI_ID} \
             FunctionBucket=${FUNCTION_BUCKET} \
         --capabilities CAPABILITY_IAM
+
+install: updatefunc installauthorizer
 
 ## Define checks to run on PR
 check: flake8 pylint coverage
