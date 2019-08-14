@@ -8,12 +8,6 @@
 
 ## Install BASIC_AUTH custom authorizer to APIGateway
 
-
-Create command?
-```
-pipenv run python -m authorizers.install --user ${USERNAME} --password ${PASSWORD}
-```
-
 ### Deploy and install Authorizer
 
 1. Create s3 bucket for custom auth function:
