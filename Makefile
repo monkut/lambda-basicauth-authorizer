@@ -51,7 +51,7 @@ updatefunc: zipcode putcode
 installauthorizer:
 	pipenv run python -m authorizers.install --restapi-id ${RESTAPI_ID}
 
-deploy: checkenv
+deploy: checkenv zipcode putcode
 	aws cloudformation deploy --template-file ./infrastructure/cfn/apigateway_customauth.cfn.yaml --stack-name ${FUNCTION_BUCKET} \
         --parameter-overrides \
             AwsAccount=${AWS_ACCOUNT} \

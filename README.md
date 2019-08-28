@@ -13,8 +13,10 @@
 1. Create s3 bucket for custom auth function:
 
     > RESTAPI_ID is the ID to an existing API Gateway RestAPI.
-    > List existing RestAPI Ids with the awscli command
-    >
+    > List existing RestAPI Ids with the awscli command:
+    > `aws apigateway get-rest-apis`
+
+    > PROJECTID is a unique identifier for your project so that S3 buckets do not collide
 
     ```bash
     export BASIC_AUTH_USERNAME={YOUR USERNAME}
