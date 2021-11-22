@@ -51,7 +51,7 @@ Resources:
         S3Bucket: !Ref FunctionBucket
         S3Key: function.zip
 
-      Runtime: "python3.7"
+      Runtime: "python3.9"
       MemorySize: 256
       Timeout: 30
       Environment:

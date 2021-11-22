@@ -3,7 +3,7 @@
 ## Requires
 
 - awscli
-- python37
+- python39
 
 
 ## Install BASIC_AUTH custom authorizer to APIGateway

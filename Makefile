@@ -8,6 +8,7 @@ PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 AWS_ACCOUNT := $(shell aws sts get-caller-identity --profile ${AWS_PROFILE} --query 'Account' --output text)
 PROJECT_NAME = authorizers
 FUNCTION_BUCKET := lba-apigw-basicauthfunc-${PROJECTID}
+FUNCTION_NAME_STARTSWITH := lba-apigw-basicauthfunc-
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -45,8 +46,8 @@ putcode:
 	aws s3 cp function.zip s3://${FUNCTION_BUCKET}
 
 updatefunc: zipcode putcode
-	aws lambda update-function-code --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_BUCKET}')].[FunctionName]" --output text) --s3-bucket ${FUNCTION_BUCKET} --s3-key function.zip
-	aws lambda publish-version --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_BUCKET}')].[FunctionName]" --output text)
+	aws lambda update-function-code --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_NAME_STARTSWITH}')].[FunctionName]" --output text) --s3-bucket ${FUNCTION_BUCKET} --s3-key function.zip
+	aws lambda publish-version --function-name $(shell aws lambda list-functions --query "Functions[?starts_with(FunctionName, '${FUNCTION_NAME_STARTSWITH}')].[FunctionName]" --output text)
 
 installauthorizer:
 	pipenv run python -m authorizers.install --restapi-id ${RESTAPI_ID}
